@@ -3,24 +3,38 @@ import logging
 
 from fastapi import FastAPI
 
+from app.api.routes.assistant import router as assistant_router
 from app.api.routes.health import router as health_router
+from app.clients.django import DjangoClient
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.request_id import RequestIDMiddleware
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
+    client = getattr(application.state, "django_client", None)
+    if client is None:
+        client = DjangoClient(
+            str(settings.django_api_base_url),
+            timeout_seconds=settings.django_timeout_seconds,
+            max_response_bytes=settings.django_max_response_bytes,
+        )
+    application.state.django_client = client
     logging.getLogger(__name__).info("Application started", extra={"environment": settings.environment})
-    yield
+    try:
+        yield
+    finally:
+        await client.aclose()
 
 
 def create_app() -> FastAPI:
     application = FastAPI(title="Market Data AI Service", lifespan=lifespan)
     application.add_middleware(RequestIDMiddleware)
     application.include_router(health_router)
+    application.include_router(assistant_router, prefix="/api/v1")
     return application
 
 
