@@ -17,6 +17,30 @@ Exact endpoint suffixes and complete response schemas are not included in the su
 
 See `docs/` and `features/FEATURE_001_FASTAPI_FOUNDATION.md`.
 
+## Feature 002: Django authentication boundary
+
+The frontend continues to register, log in, refresh, and log out through
+Django. A protected `POST /api/v1/assistant/chat/` endpoint accepts the Django
+access token as a Bearer token. FastAPI forwards it to Django's documented
+`GET /api/v1/auth/me/` endpoint before processing the request. A successful
+verification currently returns and logs `user is authenticated`; this is a
+placeholder boundary, not an LLM-powered assistant.
+
+FastAPI does not store or refresh tokens, accept frontend identity claims, or
+provide registration/login endpoints. It rejects missing/invalid credentials,
+maps upstream failures to safe responses, validates the chat body, and redacts
+credentials from its authentication log. Django analytics calls are not part
+of this feature: their live OpenAPI contract remains unverified, so no
+analytics endpoint or response schema has been assumed. The auth endpoint
+listed above comes from the supplied Django API documentation; no live Django
+service was contacted for this milestone.
+
+Run the mocked test suite with `python -m pytest`. Feature 002 tests cover
+Bearer forwarding, missing/invalid credentials, unavailable or malformed
+Django responses, request validation, and log redaction. The last recorded
+run passed all 22 tests; it used mocked Django responses and does not verify a
+live Django deployment.
+
 ## Run locally
 
 Use Python 3.12 or newer:
@@ -25,8 +49,11 @@ Use Python 3.12 or newer:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-uvicorn app.main:app --reload
+python -m app
 ```
+
+The default local port is `8001`. For auto-reload during development, run
+`uvicorn app.main:app --reload --port 8001`.
 
 To install the test tools as well, run `python -m pip install -e ".[dev]"`.
 

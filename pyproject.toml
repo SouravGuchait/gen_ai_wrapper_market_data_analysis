@@ -19,7 +19,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["app/tests"]
 addopts = "-ra"
 markers = ["integration: tests requiring an explicitly configured isolated service"]
 
