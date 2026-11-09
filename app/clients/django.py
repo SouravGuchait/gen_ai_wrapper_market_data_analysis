@@ -1,6 +1,4 @@
 from collections.abc import Mapping
-from typing import Any
-
 import httpx
 
 
@@ -9,7 +7,7 @@ class DjangoAPIError(Exception):
 
     def __init__(self, message: str, *, status_code: int | None = None) -> None:
         super().__init__(message)
-        self.status_code = status_code
+        self.status_code: int | None = status_code
 
 
 class DjangoClient:
@@ -21,13 +19,13 @@ class DjangoClient:
         max_response_bytes: int = 1_048_576,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        self._client = httpx.AsyncClient(
+        self._client: httpx.AsyncClient = httpx.AsyncClient(
             base_url=base_url.rstrip("/") + "/",
             timeout=httpx.Timeout(timeout_seconds),
             transport=transport,
             follow_redirects=False,
         )
-        self._max_response_bytes = max_response_bytes
+        self._max_response_bytes: int = max_response_bytes
 
     async def request(
         self,
@@ -36,7 +34,7 @@ class DjangoClient:
         *,
         headers: Mapping[str, str] | None = None,
         params: Mapping[str, str] | None = None,
-        json: Any = None,
+        json: dict[str, object] | None = None,
     ) -> httpx.Response:
         try:
             async with self._client.stream(
@@ -46,8 +44,15 @@ class DjangoClient:
                 async for chunk in response.aiter_bytes():
                     body.extend(chunk)
                     if len(body) > self._max_response_bytes:
-                        raise DjangoAPIError("Django response exceeded configured size limit")
-                response._content = bytes(body)
+                        raise DjangoAPIError(
+                            "Django response exceeded configured size limit", status_code=response.status_code
+                        )
+                response = httpx.Response(
+                    status_code=response.status_code,
+                    headers=response.headers,
+                    content=bytes(body),
+                    request=response.request,
+                )
                 if response.is_error:
                     raise DjangoAPIError(
                         "Django returned an unsuccessful response", status_code=response.status_code

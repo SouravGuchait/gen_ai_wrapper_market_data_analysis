@@ -1,5 +1,7 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 import logging
+from typing import cast
 
 from fastapi import FastAPI
 
@@ -12,10 +14,10 @@ from app.core.request_id import RequestIDMiddleware
 
 
 @asynccontextmanager
-async def lifespan(application: FastAPI):
+async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     configure_logging(settings.log_level)
-    client = getattr(application.state, "django_client", None)
+    client = cast(DjangoClient | None, getattr(application.state, "django_client", None))
     if client is None:
         client = DjangoClient(
             str(settings.django_api_base_url),

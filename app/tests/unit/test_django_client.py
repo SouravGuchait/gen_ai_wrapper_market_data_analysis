@@ -35,7 +35,7 @@ def test_client_maps_http_error_without_body_leak() -> None:
         client = DjangoClient("http://django.test/", transport=httpx.MockTransport(handler))
         try:
             with pytest.raises(DjangoAPIError, match="unsuccessful response") as error:
-                await client.request("GET", "resource")
+                _ = await client.request("GET", "resource")
             assert error.value.status_code == 403
             assert "private backend detail" not in str(error.value)
         finally:
@@ -56,14 +56,14 @@ def test_client_maps_timeout_and_enforces_response_limit() -> None:
         client = DjangoClient("http://django.test/", transport=httpx.MockTransport(timeout))
         try:
             with pytest.raises(DjangoAPIError, match="timed out"):
-                await client.request("GET", "resource")
+                _ = await client.request("GET", "resource")
         finally:
             await client.aclose()
 
         client = DjangoClient("http://django.test/", max_response_bytes=4, transport=httpx.MockTransport(too_large))
         try:
             with pytest.raises(DjangoAPIError, match="size limit"):
-                await client.request("GET", "resource")
+                _ = await client.request("GET", "resource")
         finally:
             await client.aclose()
 

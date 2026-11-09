@@ -1,35 +1,33 @@
-from typing import Annotated, Any
-
-from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import Field, TypeAdapter, ValidationError
+from fastapi import FastAPI, HTTPException, Request, status
+from pydantic import TypeAdapter
+from typing import cast
 
 from app.clients.django import DjangoAPIError, DjangoClient
 
-_bearer_scheme = HTTPBearer(auto_error=False)
-_user_payload = TypeAdapter(Annotated[dict[str, Any], Field(min_length=1)])
+_user_payload = TypeAdapter(dict[str, object])
 
 
 def get_django_client(request: Request) -> DjangoClient:
-    return request.app.state.django_client
+    application = cast(FastAPI, request.app)
+    return cast(DjangoClient, application.state.django_client)
 
 
-async def get_current_django_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
-    client: DjangoClient = Depends(get_django_client),
-) -> dict[str, Any]:
-    if credentials is None or credentials.scheme.lower() != "bearer":
+async def get_current_django_user(request: Request) -> dict[str, object]:
+    parts = request.headers.get("authorization", "").split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    client = get_django_client(request)
+
     try:
         response = await client.request(
             "GET",
             "api/v1/auth/me/",
-            headers={"Authorization": f"Bearer {credentials.credentials}"},
+            headers={"Authorization": f"Bearer {parts[1]}"},
         )
     except DjangoAPIError as exc:
         if exc.status_code in (401, 403):
@@ -49,8 +47,11 @@ async def get_current_django_user(
         ) from exc
 
     try:
-        return _user_payload.validate_python(response.json())
-    except (ValueError, ValidationError) as exc:
+        user = _user_payload.validate_json(response.content)
+        if len(user) == 0:
+            raise ValueError("Django returned an empty user payload")
+        return user
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Authentication service returned an invalid response",
