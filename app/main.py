@@ -16,7 +16,7 @@ from app.core.request_id import RequestIDMiddleware
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
-    configure_logging(settings.log_level)
+    configure_logging(settings.log_level, settings.log_file_path)
     client = cast(DjangoClient | None, getattr(application.state, "django_client", None))
     if client is None:
         client = DjangoClient(
