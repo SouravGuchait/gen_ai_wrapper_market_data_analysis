@@ -1,7 +1,6 @@
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-import logging
-from typing import cast
 
 from fastapi import FastAPI
 
@@ -17,15 +16,21 @@ from app.core.request_id import RequestIDMiddleware
 async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     configure_logging(settings.log_level, settings.log_file_path)
-    client = cast(DjangoClient | None, getattr(application.state, "django_client", None))
-    if client is None:
-        client = DjangoClient(
+    existing = getattr(application.state, "django_client", None)
+    client = (
+        existing
+        if isinstance(existing, DjangoClient)
+        else DjangoClient(
             str(settings.django_api_base_url),
             timeout_seconds=settings.django_timeout_seconds,
             max_response_bytes=settings.django_max_response_bytes,
+            host_header=settings.django_api_host_header,
         )
+    )
     application.state.django_client = client
-    logging.getLogger(__name__).info("Application started", extra={"environment": settings.environment})
+    logging.getLogger(__name__).info(
+        "Application started", extra={"environment": settings.environment}
+    )
     try:
         yield
     finally:

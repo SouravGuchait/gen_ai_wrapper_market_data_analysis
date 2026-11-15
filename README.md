@@ -43,28 +43,54 @@ live Django deployment.
 
 ## Run locally
 
-Use Python 3.12 or newer:
+Use Python 3.12 on WSL. The project interpreter is `.venv/bin/python`.
+FastAPI listens on port `8002` so it does not collide with Django (`8000`),
+the Cursor server (`8001`), or Streamlit (`8501`).
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
 python -m pip install -r requirements.txt
+python -m pip install -e ".[dev]"
 python -m app
 ```
 
-The default local port is `8001`. For auto-reload during development, run
-`uvicorn app.main:app --reload --port 8001`.
+Development configuration lives in `~/.config/env_vars/dev-ai.env`. The service
+reads that file when it is present. `.env.example` only lists the variable
+names with placeholder values.
 
-To install the test tools as well, run `python -m pip install -e ".[dev]"`.
+With Docker already running in WSL, install the shell shortcuts once:
+
+```bash
+./scripts/install_fpi_commands.sh
+source ~/.bashrc
+```
+
+Then use:
+
+```bash
+fpi_up
+fpi_restart
+fpi_down
+```
+
+`fpi_up` starts the API in the background on port `8002`. Inside the container,
+Django is reached at `http://host.docker.internal:8000/` because `localhost`
+there is the container, not the WSL host. Compose also sets
+`DJANGO_API_HOST_HEADER=127.0.0.1` so Django's `ALLOWED_HOSTS` accepts the
+request; without that override Django returns `400` for Host
+`host.docker.internal`.
 
 The service exposes `GET /health` (`{"status":"ok"}`) and `GET /ready`
 (`{"status":"ready"}`). Both currently report the FastAPI process only; no
 Django dependency check is performed. Requests receive an `X-Request-ID` if
-the caller does not provide one.
+the caller does not provide one. Containers write rotating application logs to
+`/var/log/ai/app.log`.
 
-Copy `.env.example` to `.env` to configure `DJANGO_API_BASE_URL`,
+`~/.config/env_vars/dev-ai.env` configures `DJANGO_API_BASE_URL`,
 `DJANGO_TIMEOUT_SECONDS`, `DJANGO_MAX_RESPONSE_BYTES`, `ENVIRONMENT`, and
-`LOG_LEVEL`. The Django client boundary is asynchronous and enforces a timeout,
+`LOG_LEVEL` for this machine. `.env.example` is only a placeholder reference.
+The Django client boundary is asynchronous and enforces a timeout,
 response-size limit, and safe transport errors. Analytics calls are not
 implemented because the live Django OpenAPI contract has not been verified.
 

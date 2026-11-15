@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import httpx
-import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
@@ -29,7 +28,7 @@ def perform_chat(
     try:
         client = TestClient(app)
         with client:
-            response : httpx2.Response = client.request(
+            response = client.request(
                 "POST",
                 "/api/v1/assistant/chat/",
                 json=(

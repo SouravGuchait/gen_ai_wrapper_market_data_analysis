@@ -5,15 +5,14 @@ from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 REQUEST_ID_HEADER = "X-Request-ID"
+_MAX_REQUEST_ID_LENGTH = 128
 
 
 class RequestIDMiddleware:
     def __init__(self, app: ASGIApp) -> None:
         self.app: ASGIApp = app
 
-    async def __call__(
-        self, scope: Scope, receive: Receive, send: Send
-    ) -> None:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -22,7 +21,7 @@ class RequestIDMiddleware:
         supplied_id = request.headers.get(REQUEST_ID_HEADER, "").strip()
         valid_id = (
             supplied_id != ""
-            and len(supplied_id) <= 128
+            and len(supplied_id) <= _MAX_REQUEST_ID_LENGTH
             and supplied_id.isascii()
             and all(character.isalnum() or character in "-_." for character in supplied_id)
         )

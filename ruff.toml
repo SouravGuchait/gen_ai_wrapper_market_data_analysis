@@ -1,0 +1,26 @@
+target-version = "py312"
+line-length = 100
+extend-exclude = [".venv", "logs", "*.sh"]
+
+[lint]
+select = [
+    "E", "F", "I", "UP", "B",
+    "C90", "PLR", "SIM",
+    "RET", "PIE", "FURB", "ERA",
+]
+ignore = ["E501"]
+
+[lint.isort]
+known-first-party = ["app"]
+
+[lint.mccabe]
+max-complexity = 7
+
+[lint.pylint]
+max-args = 5
+max-branches = 8
+max-returns = 3
+max-statements = 30
+
+[lint.per-file-ignores]
+"**/tests/**" = ["PLR2004", "PLR0913", "PLR0915"]

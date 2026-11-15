@@ -1,0 +1,50 @@
+# FastAPI development service. Django stays on the WSL host at port 8000.
+# Start with fpi_up. The container publishes this service on port 8002.
+
+name: fpi
+
+services:
+  api:
+    build:
+      context: .
+    image: fpi-api:dev
+    restart: unless-stopped
+    command:
+      - python
+      - -m
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8002"
+      - --reload
+      - --reload-dir
+      - app
+    environment:
+      APP_NAME: ${APP_NAME:-Market Data AI Service}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8002"
+      # localhost inside the container is not the WSL host where Django runs.
+      DJANGO_API_BASE_URL: http://host.docker.internal:8000/
+      # Django ALLOWED_HOSTS is typically localhost/127.0.0.1/web, not host.docker.internal.
+      DJANGO_API_HOST_HEADER: ${DJANGO_API_HOST_HEADER:-127.0.0.1}
+      DJANGO_TIMEOUT_SECONDS: ${DJANGO_TIMEOUT_SECONDS:-10}
+      DJANGO_MAX_RESPONSE_BYTES: ${DJANGO_MAX_RESPONSE_BYTES:-1048576}
+      LOG_FILE_PATH: /var/log/ai/app.log
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      LLM_MODEL_ID: ${LLM_MODEL_ID:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.2}
+      LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-2048}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-1}
+    ports:
+      - "8002:8002"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/app
+      - ./logs:/var/log/ai

@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+
 import httpx
 
 
@@ -17,6 +18,7 @@ class DjangoClient:
         *,
         timeout_seconds: float = 10.0,
         max_response_bytes: int = 1_048_576,
+        host_header: str | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._client: httpx.AsyncClient = httpx.AsyncClient(
@@ -26,6 +28,17 @@ class DjangoClient:
             follow_redirects=False,
         )
         self._max_response_bytes: int = max_response_bytes
+        trimmed = host_header.strip() if host_header is not None else ""
+        self._host_header: str | None = trimmed or None
+
+    def _request_headers(self, headers: Mapping[str, str] | None) -> dict[str, str]:
+        merged = dict(headers or {})
+        if self._host_header is None:
+            return merged
+        if any(name.lower() == "host" for name in merged):
+            return merged
+        merged["Host"] = self._host_header
+        return merged
 
     async def request(
         self,
@@ -38,14 +51,19 @@ class DjangoClient:
     ) -> httpx.Response:
         try:
             async with self._client.stream(
-                method, path.lstrip("/"), headers=headers, params=params, json=json
+                method,
+                path.lstrip("/"),
+                headers=self._request_headers(headers),
+                params=params,
+                json=json,
             ) as response:
                 body = bytearray()
                 async for chunk in response.aiter_bytes():
                     body.extend(chunk)
                     if len(body) > self._max_response_bytes:
                         raise DjangoAPIError(
-                            "Django response exceeded configured size limit", status_code=response.status_code
+                            "Django response exceeded configured size limit",
+                            status_code=response.status_code,
                         )
                 response = httpx.Response(
                     status_code=response.status_code,

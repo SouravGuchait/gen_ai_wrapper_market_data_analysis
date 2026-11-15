@@ -16,10 +16,39 @@ def test_client_sends_bearer_header_and_returns_response() -> None:
     async def exercise() -> None:
         client = DjangoClient("http://django.test/", transport=httpx.MockTransport(handler))
         try:
-            response = await client.request("GET", "/api/v1/example/", headers={"Authorization": "Bearer test-token"})
+            response = await client.request(
+                "GET", "/api/v1/example/", headers={"Authorization": "Bearer test-token"}
+            )
             assert response.json() == {"ok": True}
             assert seen is not None and seen.headers["Authorization"] == "Bearer test-token"
             assert str(seen.url) == "http://django.test/api/v1/example/"
+        finally:
+            await client.aclose()
+
+    with start_blocking_portal() as portal:
+        portal.call(exercise)
+
+
+def test_client_applies_configured_host_header() -> None:
+    seen: httpx.Request | None = None
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal seen
+        seen = request
+        return httpx.Response(200, json={"ok": True})
+
+    async def exercise() -> None:
+        client = DjangoClient(
+            "http://host.docker.internal:8000/",
+            host_header="127.0.0.1",
+            transport=httpx.MockTransport(handler),
+        )
+        try:
+            response = await client.request("GET", "api/v1/auth/me/")
+            assert response.status_code == 200
+            assert seen is not None
+            assert seen.headers["Host"] == "127.0.0.1"
+            assert str(seen.url) == "http://host.docker.internal:8000/api/v1/auth/me/"
         finally:
             await client.aclose()
 
@@ -60,7 +89,9 @@ def test_client_maps_timeout_and_enforces_response_limit() -> None:
         finally:
             await client.aclose()
 
-        client = DjangoClient("http://django.test/", max_response_bytes=4, transport=httpx.MockTransport(too_large))
+        client = DjangoClient(
+            "http://django.test/", max_response_bytes=4, transport=httpx.MockTransport(too_large)
+        )
         try:
             with pytest.raises(DjangoAPIError, match="size limit"):
                 _ = await client.request("GET", "resource")

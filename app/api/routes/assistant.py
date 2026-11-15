@@ -6,7 +6,6 @@ from fastapi.security import HTTPBearer
 from app.api.dependencies import get_current_django_user
 from app.schemas.assistant import ChatRequest, ChatResponse
 
-
 logger = logging.getLogger(__name__)
 _bearer_scheme = HTTPBearer(auto_error=False)
 router = APIRouter(

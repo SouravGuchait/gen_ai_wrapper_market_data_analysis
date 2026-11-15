@@ -1,20 +1,22 @@
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import HTTPException, Request, status
 from pydantic import TypeAdapter
-from typing import cast
 
 from app.clients.django import DjangoAPIError, DjangoClient
 
 _user_payload = TypeAdapter(dict[str, object])
+_BEARER_PART_COUNT = 2
 
 
 def get_django_client(request: Request) -> DjangoClient:
-    application = cast(FastAPI, request.app)
-    return cast(DjangoClient, application.state.django_client)
+    client = getattr(request.app.state, "django_client", None)
+    if not isinstance(client, DjangoClient):
+        raise RuntimeError("Django client is not configured")
+    return client
 
 
 async def get_current_django_user(request: Request) -> dict[str, object]:
     parts = request.headers.get("authorization", "").split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
+    if len(parts) != _BEARER_PART_COUNT or parts[0].lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
@@ -36,7 +38,10 @@ async def get_current_django_user(request: Request) -> dict[str, object]:
                 detail="Invalid or expired access token",
                 headers={"WWW-Authenticate": "Bearer"},
             ) from exc
-        if exc.status_code is None or exc.status_code >= 500 or exc.status_code == 429:
+        unavailable = (
+            exc.status_code is None or exc.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+        if unavailable or exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Authentication service unavailable",

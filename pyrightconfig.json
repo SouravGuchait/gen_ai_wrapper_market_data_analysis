@@ -1,8 +1,13 @@
 {
-    "venvPath": ".",
-    "venv": ".venv",
-    "extraPaths": [
-        ".venv/Lib/site-packages"
-    ],
-    "reportPrivateUsage": "none"
+  "include": ["app"],
+  "exclude": [".venv", "**/__pycache__/**"],
+  "typeCheckingMode": "standard",
+  "pythonVersion": "3.12",
+  "venvPath": ".",
+  "venv": ".venv",
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": true,
+  "reportUnusedVariable": true,
+  "reportPrivateUsage": "none"
 }

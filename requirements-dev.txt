@@ -1,0 +1,6 @@
+# Development and test dependencies. Install with:
+# .venv/bin/pip install -r requirements-dev.txt
+
+pytest>=8.3,<9.0
+ruff>=0.9.9,<0.10
+basedpyright>=1.40.2,<1.41
