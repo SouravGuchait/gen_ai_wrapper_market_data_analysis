@@ -15,7 +15,12 @@ from app.core.request_id import RequestIDMiddleware
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
-    configure_logging(settings.log_level, settings.log_file_path)
+    # Match Django: /var/log/... is for containers; local/CI may lack permission.
+    configure_logging(
+        settings.log_level,
+        settings.log_file_path,
+        allow_fallback=settings.environment == "development",
+    )
     existing = getattr(application.state, "django_client", None)
     client = (
         existing

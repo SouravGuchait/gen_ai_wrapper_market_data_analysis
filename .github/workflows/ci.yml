@@ -47,4 +47,8 @@ jobs:
         run: .venv/bin/basedpyright
 
       - name: Unit tests
+        env:
+          # CI cannot create /var/log/ai; Django tests disable file logs the same way.
+          LOG_FILE_PATH: ${{ runner.temp }}/ai/app.log
+          ENVIRONMENT: development
         run: .venv/bin/python -m pytest app/tests/unit -q

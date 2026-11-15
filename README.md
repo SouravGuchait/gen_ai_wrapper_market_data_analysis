@@ -85,7 +85,7 @@ The service exposes `GET /health` (`{"status":"ok"}`) and `GET /ready`
 (`{"status":"ready"}`). Both currently report the FastAPI process only; no
 Django dependency check is performed. Requests receive an `X-Request-ID` if
 the caller does not provide one. Containers write rotating application logs to
-`/var/log/ai/app.log`.
+`/var/log/ai/app.log`. In local development or CI, if that path is not writable, logging falls back to `logs/app.log`.
 
 `~/.config/env_vars/dev-ai.env` configures `DJANGO_API_BASE_URL`,
 `DJANGO_TIMEOUT_SECONDS`, `DJANGO_MAX_RESPONSE_BYTES`, `ENVIRONMENT`, and

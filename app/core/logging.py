@@ -5,13 +5,29 @@ from pathlib import Path
 _LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
 _MAX_BYTES = 5_000_000
 _BACKUP_COUNT = 3
+_FALLBACK_LOG_PATH = Path("logs") / "app.log"
 
 
-def configure_logging(level: str, file_path: str) -> None:
-    """Configure root logging to stdout and a rotating file."""
+def _prepare_log_path(file_path: str, *, allow_fallback: bool) -> Path:
     log_path = Path(file_path).expanduser().resolve()
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        if not allow_fallback:
+            raise
+        log_path = _FALLBACK_LOG_PATH.resolve()
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+    return log_path
 
+
+def configure_logging(
+    level: str,
+    file_path: str,
+    *,
+    allow_fallback: bool = False,
+) -> None:
+    """Configure root logging to stdout and a rotating file."""
+    log_path = _prepare_log_path(file_path, allow_fallback=allow_fallback)
     formatter = logging.Formatter(_LOG_FORMAT)
     console = logging.StreamHandler()
     console.setFormatter(formatter)
