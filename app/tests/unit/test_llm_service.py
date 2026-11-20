@@ -91,7 +91,9 @@ def test_service_logs_absent_usage_and_failure_type(caplog: pytest.LogCaptureFix
 
 
 def test_service_throttles_before_calling_the_provider(caplog: pytest.LogCaptureFixture) -> None:
-    provider = _Provider(result=_result(usage=TokenUsage(input_tokens=0, output_tokens=0, total_tokens=0)))
+    provider = _Provider(
+        result=_result(usage=TokenUsage(input_tokens=0, output_tokens=0, total_tokens=0))
+    )
     limiter = RateLimiter(1, 60)
     with caplog.at_level(logging.INFO):
         asyncio.run(run_llm_test(provider, limiter, _request()))

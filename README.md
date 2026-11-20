@@ -130,3 +130,14 @@ implemented because the live Django OpenAPI contract has not been verified.
 Run `python -m pytest`. Unit tests use mocked HTTP; live-service integration
 tests remain disabled until a separate isolated Django test service and its
 verified API contract are available. CI runs the unit suite on Python 3.12.
+
+Git runs the same lint, format, and type checks before each commit once the
+hook is installed:
+
+```bash
+python -m pip install -r requirements-dev.txt
+pre-commit install
+```
+
+That writes an executable `.git/hooks/pre-commit`. On commit it runs `ruff check`,
+`ruff format --check`, and `.venv/bin/basedpyright`.
