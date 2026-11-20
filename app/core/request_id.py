@@ -25,7 +25,9 @@ class RequestIDMiddleware:
             and supplied_id.isascii()
             and all(character.isalnum() or character in "-_." for character in supplied_id)
         )
-        request_id = supplied_id if valid_id else str(uuid4())
+        request_id = str(uuid4())
+        if valid_id:
+            request_id = supplied_id
         request.state.request_id = request_id
 
         async def send_with_request_id(message: Message) -> None:
@@ -34,3 +36,10 @@ class RequestIDMiddleware:
             await send(message)
 
         await self.app(scope, receive, send_with_request_id)
+
+
+def read_request_id(request: Request) -> str:
+    raw_request_id = getattr(request.state, "request_id", "")
+    if isinstance(raw_request_id, str):
+        return raw_request_id
+    return ""

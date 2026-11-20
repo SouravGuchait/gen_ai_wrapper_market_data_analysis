@@ -37,9 +37,38 @@ service was contacted for this milestone.
 
 Run the mocked test suite with `python -m pytest`. Feature 002 tests cover
 Bearer forwarding, missing/invalid credentials, unavailable or malformed
-Django responses, request validation, and log redaction. The last recorded
-run passed all 22 tests; it used mocked Django responses and does not verify a
-live Django deployment.
+Django responses, request validation, and log redaction.
+
+## Feature 003: Direct LLM provider integration
+
+`POST /api/v1/llm/test` is a protected development endpoint. It requires the
+same Django Bearer token as chat. FastAPI verifies it with `GET /api/v1/auth/me/`
+and then calls the configured OpenAI-compatible provider. The request body is
+`{"message": "..."}`. The response uses the envelope
+`{"success": true, "data": {...}, "errors": []}`.
+Omitted provider token counts are stored as `0`.
+
+`LLM_PROVIDER` selects `xai` or `openrouter`. xAI uses `LLM_API_KEY`,
+`LLM_BASE_URL`, and `LLM_MODEL_ID`. OpenRouter uses `OPENROUTER_API_KEY`,
+`OPENROUTER_BASE_URL`, and the same `LLM_MODEL_ID`. Optional
+`OPENROUTER_HTTP_REFERER` and `OPENROUTER_APP_TITLE` are sent only when set.
+Changing provider is an environment change, not a code change. Model IDs and
+base URLs are not hardcoded.
+
+Provider errors are mapped to safe HTTP responses. Timeouts, rate limits, and
+provider outages retry up to `LLM_MAX_RETRIES` (0–2). Authentication and
+validation failures are not retried. The endpoint also applies an in-process
+per-user limit (`LLM_RATE_LIMIT_REQUESTS` per `LLM_RATE_LIMIT_WINDOW_SECONDS`).
+That limit is not shared across processes.
+
+Logs record request ID, Django user id from `/api/v1/auth/me/`, provider,
+model, duration, outcome, and token counts when the provider returns them.
+They do not record the prompt, API keys, or bearer token. This is service-side
+audit context. Django's documented `/api/v1/audit/` API is read-only, so this
+feature does not post a new audit event.
+
+The standard suite mocks the OpenAI SDK and Django. It does not call xAI or
+OpenRouter. The latest local run passed 65 tests.
 
 ## Run locally
 
@@ -74,9 +103,10 @@ fpi_restart
 fpi_down
 ```
 
-`fpi_up` starts the API in the background on port `8002`. Inside the container,
-Django is reached at `http://host.docker.internal:8000/` because `localhost`
-there is the container, not the WSL host. Compose also sets
+`fpi_up` starts the API in the background on port `8002`. On the WSL host,
+Django is `http://127.0.0.1:8501/`. Inside the container, that same nginx is
+`http://host.docker.internal:8501/` because `127.0.0.1` there is the container.
+Compose also sets
 `DJANGO_API_HOST_HEADER=127.0.0.1` so Django's `ALLOWED_HOSTS` accepts the
 request; without that override Django returns `400` for Host
 `host.docker.internal`.
@@ -88,8 +118,9 @@ the caller does not provide one. Containers write rotating application logs to
 `/var/log/ai/app.log`. In local development or CI, if that path is not writable, logging falls back to `logs/app.log`.
 
 `~/.config/env_vars/dev-ai.env` configures `DJANGO_API_BASE_URL`,
-`DJANGO_TIMEOUT_SECONDS`, `DJANGO_MAX_RESPONSE_BYTES`, `ENVIRONMENT`, and
-`LOG_LEVEL` for this machine. `.env.example` is only a placeholder reference.
+`DJANGO_TIMEOUT_SECONDS`, `DJANGO_MAX_RESPONSE_BYTES`, `ENVIRONMENT`,
+`LOG_LEVEL`, and the LLM provider variables for this machine.
+`.env.example` is only a placeholder reference.
 The Django client boundary is asynchronous and enforces a timeout,
 response-size limit, and safe transport errors. Analytics calls are not
 implemented because the live Django OpenAPI contract has not been verified.

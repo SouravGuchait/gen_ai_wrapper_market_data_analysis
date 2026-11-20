@@ -1,0 +1,4 @@
+let's make ai agent improvement skill md from each feature
+update the mardowns from chatgpt
+copy the aws console and api documents from market data
+integration test with django mysql fastapi llm

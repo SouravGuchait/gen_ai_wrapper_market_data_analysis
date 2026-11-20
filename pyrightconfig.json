@@ -1,6 +1,6 @@
 {
-  "include": ["app"],
-  "exclude": [".venv", "**/__pycache__/**"],
+  "include": ["app","app/core","app/tests"],
+  "exclude": [".venv", "**/__pycache__/**", "**/*.ipynb", "scripts", "logs"],
   "typeCheckingMode": "standard",
   "pythonVersion": "3.12",
   "venvPath": ".",
@@ -9,5 +9,9 @@
   "reportMissingTypeStubs": false,
   "reportUnusedImport": true,
   "reportUnusedVariable": true,
-  "reportPrivateUsage": "none"
+  "reportPrivateUsage": "none",
+  "reportUnnecessaryCast": "error",
+  "reportUnnecessaryComparison": "error",
+  "reportUnreachable": "warning",
+  "reportExplicitAny": "error"
 }
