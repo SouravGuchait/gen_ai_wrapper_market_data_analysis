@@ -27,8 +27,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       APP_HOST: 0.0.0.0
       APP_PORT: "8002"
-      # localhost inside the container is not the WSL host where Django runs.
-      DJANGO_API_BASE_URL: http://host.docker.internal:8000/
+      # 127.0.0.1 inside the container is the container. Nginx on the WSL host is port 8501.
+      DJANGO_API_BASE_URL: http://host.docker.internal:8501/
       # Django ALLOWED_HOSTS is typically localhost/127.0.0.1/web, not host.docker.internal.
       DJANGO_API_HOST_HEADER: ${DJANGO_API_HOST_HEADER:-127.0.0.1}
       DJANGO_TIMEOUT_SECONDS: ${DJANGO_TIMEOUT_SECONDS:-10}
@@ -37,10 +37,17 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-}
       LLM_MODEL_ID: ${LLM_MODEL_ID:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.2}
       LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-2048}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
       LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-1}
+      LLM_RATE_LIMIT_REQUESTS: ${LLM_RATE_LIMIT_REQUESTS:-30}
+      LLM_RATE_LIMIT_WINDOW_SECONDS: ${LLM_RATE_LIMIT_WINDOW_SECONDS:-60}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
+      OPENROUTER_HTTP_REFERER: ${OPENROUTER_HTTP_REFERER:-}
+      OPENROUTER_APP_TITLE: ${OPENROUTER_APP_TITLE:-}
     ports:
       - "8002:8002"
     extra_hosts:
